@@ -22,15 +22,24 @@ interface EventType {
   slug: string;
 }
 
-// Email configuration
+// Email configuration - FIXED for Railway + TypeScript
 const createTransporter = () => {
+  console.log('📧 Creating email transporter...');
+  console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
+  
+  // Use 'as any' to bypass TypeScript strict checking for Nodemailer options
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-  });
+    tls: {
+      rejectUnauthorized: false,
+    },
+  } as any);
 };
 
 // Format date and time for email
@@ -51,6 +60,10 @@ export const sendBookingConfirmation = async (
   eventType: EventType
 ): Promise<void> => {
   try {
+    console.log('\n📧 Preparing to send confirmation email...');
+    console.log('To:', booking.bookerEmail);
+    console.log('Event:', eventType.title);
+    
     const transporter = createTransporter();
 
     const startDateTime = formatDateTime(
@@ -239,8 +252,10 @@ Need help? Contact us at ${process.env.EMAIL_USER}
 © 2026 Cal Clone
     `;
 
+    console.log('📤 Sending email...');
+
     // Send email
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"Cal Clone" <${process.env.EMAIL_USER}>`,
       to: booking.bookerEmail,
       subject: `✅ Booking Confirmed - ${eventType.title}`,
@@ -248,10 +263,11 @@ Need help? Contact us at ${process.env.EMAIL_USER}
       html: htmlContent,
     });
 
-    console.log(`✅ Confirmation email sent to ${booking.bookerEmail}`);
+    console.log('✅ Confirmation email sent successfully!');
+    console.log('Message ID:', info.messageId);
   } catch (error) {
     console.error('❌ Failed to send email:', error);
-    throw error; // Re-throw so caller knows it failed
+    throw error;
   }
 };
 
@@ -261,6 +277,9 @@ export const sendCancellationEmail = async (
   eventType: EventType
 ): Promise<void> => {
   try {
+    console.log('\n📧 Preparing to send cancellation email...');
+    console.log('To:', booking.bookerEmail);
+    
     const transporter = createTransporter();
 
     const startDateTime = formatDateTime(
@@ -314,6 +333,8 @@ export const sendCancellationEmail = async (
       </html>
     `;
 
+    console.log('📤 Sending cancellation email...');
+
     await transporter.sendMail({
       from: `"Cal Clone" <${process.env.EMAIL_USER}>`,
       to: booking.bookerEmail,
@@ -321,7 +342,7 @@ export const sendCancellationEmail = async (
       html: htmlContent,
     });
 
-    console.log(`✅ Cancellation email sent to ${booking.bookerEmail}`);
+    console.log('✅ Cancellation email sent successfully!');
   } catch (error) {
     console.error('❌ Failed to send cancellation email:', error);
     throw error;
